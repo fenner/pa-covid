@@ -36,12 +36,18 @@ with open( '../covid-19-data/us-counties.csv' ) as nytcsv:
 	cases[ row[ 'county' ] ][ row[ 'date' ] ] = int( row[ 'cases' ] )
         latest[ row[ 'county' ] ] = row[ 'date' ]
 
-countiesOfInterest = ( 'Erie', 'Centre', 'Chester', 'Montgomery', 'Delaware', 'Philadelphia' )
+countiesOfInterest = ( 'Bucks', 'Berks', 'Schuylkill', 'Lancaster', 'Chester', 'Montgomery', 'Delaware', 'Philadelphia' )
+#countiesOfInterest = sorted( cases.keys() )
 for county in countiesOfInterest:
-    target = ( 50 * population[ county ] / 1000000 )
+    if county not in population:
+	continue
+    target = ( 50 * population[ county ] / 100000 )
     latestDate = datetime.datetime.strptime( latest[ county ], '%Y-%m-%d' )
     newCases = cases[ county ][ str( latestDate.date() ) ] - cases[ county ][
 			str( ( latestDate - datetime.timedelta( days=14 ) ).date() ) ]
+    if target == 0:
+	print county, "(too small)"
+	continue
     print "%s: %d new cases (%d%% of target %d)" % ( county, newCases, ( newCases * 100 / target ), target )
 
 # Now, for all the data we have about each county,
@@ -53,8 +59,12 @@ for county in countiesOfInterest:
 # reopen.
 output = {}
 for county in countiesOfInterest:
+    if county not in population:
+	continue
     dates = sorted( cases[ county ] )
-    target = ( 50 * population[ county ] / 1000000.0 )
+    target = ( 50 * population[ county ] / 100000.0 )
+    if target == 0:
+	continue
     for i in range( len( dates ) - 14 ):
         startDate = dates[ i ]
         endDate = dates[ i + 14 ]
