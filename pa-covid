@@ -1,0 +1,72 @@
+#!/usr/bin/env python
+#
+# This is a very simple script that generates data
+# about the trailing 14 day average new cases,
+# to compare with
+# https://www.governor.pa.gov/process-to-reopen-pennsylvania/
+# A target goal for reopening has been set at having fewer than 50
+# new confirmed cases per 100,000 population reported to the department
+# in the previous 14 days. So, for example, an area with a population
+# of 800,000 people would need to have fewer than 400 new confirmed
+# cases reported in the past 14 days to meet the target.
+#
+# It uses the population from
+# https://worldpopulationreview.com/us-counties/pa/
+# and the covid-19 data from
+# https://github.com/nytimes/covid-19-data
+
+import datetime
+import csv
+
+population = {}
+with open( 'population.csv' ) as popcsv:
+    popreader = csv.DictReader( popcsv )
+    for row in popreader:
+	population[ row[ 'CTYNAME' ].replace( ' County', '' ) ] = int( row[ 'Pop' ] )
+
+
+cases = {}
+latest = {}
+with open( '../covid-19-data/us-counties.csv' ) as nytcsv:
+    nytreader = csv.DictReader( nytcsv )
+    for row in nytreader:
+	if row[ 'state' ] != 'Pennsylvania':
+	    continue
+	cases.setdefault( row[ 'county' ], {} )
+	cases[ row[ 'county' ] ][ row[ 'date' ] ] = int( row[ 'cases' ] )
+        latest[ row[ 'county' ] ] = row[ 'date' ]
+
+countiesOfInterest = ( 'Erie', 'Centre', 'Chester', 'Montgomery', 'Delaware', 'Philadelphia' )
+for county in countiesOfInterest:
+    target = ( 50 * population[ county ] / 1000000 )
+    latestDate = datetime.datetime.strptime( latest[ county ], '%Y-%m-%d' )
+    newCases = cases[ county ][ str( latestDate.date() ) ] - cases[ county ][
+			str( ( latestDate - datetime.timedelta( days=14 ) ).date() ) ]
+    print "%s: %d new cases (%d%% of target %d)" % ( county, newCases, ( newCases * 100 / target ), target )
+
+# Now, for all the data we have about each county,
+# for each 14-day period we calculate what multiple
+# of the target that county is experiencing.  If
+# we can draw a trend line on the multiple-of-target
+# number, and see where it intersects with "1", then
+# that gives us a vague idea of when that county might
+# reopen.
+output = {}
+for county in countiesOfInterest:
+    dates = sorted( cases[ county ] )
+    target = ( 50 * population[ county ] / 1000000.0 )
+    for i in range( len( dates ) - 14 ):
+        startDate = dates[ i ]
+        endDate = dates[ i + 14 ]
+        numCases = cases[ county ][ endDate ] - \
+			cases[ county ][ startDate ]
+	output.setdefault( endDate, {} )
+	output[ endDate ][ county ] = numCases / target
+
+with open( 'output.csv', 'w' ) as outfile:
+    writer = csv.DictWriter( outfile, fieldnames=[ 'Date' ] + list( countiesOfInterest ) )
+    writer.writeheader()
+    for day in sorted( output ):
+	data = dict( output[ day ] )
+	data[ 'Date' ] = day
+        writer.writerow( data )
