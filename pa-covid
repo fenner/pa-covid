@@ -36,19 +36,29 @@ with open( '../covid-19-data/us-counties.csv' ) as nytcsv:
 	cases[ row[ 'county' ] ][ row[ 'date' ] ] = int( row[ 'cases' ] )
         latest[ row[ 'county' ] ] = row[ 'date' ]
 
-countiesOfInterest = ( 'Bucks', 'Berks', 'Schuylkill', 'Lancaster', 'Chester', 'Montgomery', 'Delaware', 'Philadelphia' )
+# To do: 
+# transcribe the other county groups
+# note: the smaller counties make the other groups harder to render
+# since they have more lines
+countyGroups = {
+    'southeast': ( 'Bucks', 'Berks', 'Schuylkill', 'Lancaster', 'Chester', 'Montgomery', 'Delaware', 'Philadelphia' ),
+    }
 #countiesOfInterest = sorted( cases.keys() )
+countiesOfInterest = countyGroups[ 'southeast' ]
+#countiesOfInterest = ( 'Adams', )
+# To do: do the text and the graph output for each group
+days = 7
 for county in countiesOfInterest:
     if county not in population:
 	continue
-    target = ( 50 * population[ county ] / 100000 )
+    target = ( population[ county ] / 100000 )
     latestDate = datetime.datetime.strptime( latest[ county ], '%Y-%m-%d' )
     newCases = cases[ county ][ str( latestDate.date() ) ] - cases[ county ][
-			str( ( latestDate - datetime.timedelta( days=14 ) ).date() ) ]
+			str( ( latestDate - datetime.timedelta( days=days ) ).date() ) ]
     if target == 0:
 	print county, "(too small)"
 	continue
-    print "%s: %d new cases (%d%% of target %d)" % ( county, newCases, ( newCases * 100 / target ), target )
+    print "%s: %d new cases (%d per 100k pop) in %d days" % ( county, newCases, ( newCases / target ), days )
 
 # Now, for all the data we have about each county,
 # for each 14-day period we calculate what multiple
@@ -62,7 +72,7 @@ for county in countiesOfInterest:
     if county not in population:
 	continue
     dates = sorted( cases[ county ] )
-    target = ( 50 * population[ county ] / 100000.0 )
+    target = ( population[ county ] / 100000.0 )
     if target == 0:
 	continue
     for i in range( len( dates ) - 14 ):
